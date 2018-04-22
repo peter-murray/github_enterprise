@@ -1,0 +1,188 @@
+---
+
+- hosts: localhost
+  gather_facts: no
+  roles:
+    - role: github_enterprise
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - set_fact:
+        ghe_token: b1bcd1d41926807d10714e714b6d5b8088b76819
+        ghe_base_url: https://172.20.10.5/api/v3
+        ghe_token_user: pmurray
+        organization_name: repo-tests
+        repo_name: my-test-repository
+
+    - name: Create organization for testing
+      github_organization:
+        state: present
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: '{{ organization_name }}'
+      register: result
+
+    - name: Validate organization creation
+      assert:
+        that: result.name is defined
+
+    - name: Remove the repository if already exists
+      github_repo:
+        state: present
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: '{{ repo_name }}'
+        owner: '{{ organization_name }}'
+
+    - name: Create repository
+      github_repo:
+        state: present
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: '{{ repo_name }}'
+        owner: '{{ organization_name }}'
+      register: repo_result
+
+    - name: Validate Repository creation
+      assert:
+        that:
+          - repo_result.changed
+          - repo_result.name == repo_name
+          - repo_result.organization == organization_name
+          - not repo_result.private
+          - repo_result.pull_requests.allow_squash_merge
+          - repo_result.pull_requests.allow_rebase_merge
+          - repo_result.pull_requests.allow_merge_commit
+
+    - name: Update existing repository
+      github_repo:
+        state: present
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: '{{ repo_name }}'
+        owner: '{{ organization_name }}'
+        private: yes
+      register: repo_result
+
+    - name: Validate update repository to private
+      assert:
+        that:
+          - repo_result.changed
+          - repo_result.name == repo_name
+          - repo_result.private
+          - repo_result.pull_requests is defined
+
+    - name: Update existing repository PR controls
+      github_repo:
+        state: present
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: '{{ repo_name }}'
+        owner: '{{ organization_name }}'
+        pull_requests:
+          allow_squash_merge: yes
+          allow_merge_commit: no
+          allow_rebase_merge: mo
+
+    - name: Validate update repository PR controls
+      assert:
+        that:
+          - repo_result.changed
+          - repo_result.name == repo_name
+          - repo_result.private
+          - repo_result.pull_requests is defined
+          - repo_result.pull_requests.allow_squash_merge
+          - repo_result.pull_requests.allow_rebase_merge
+          - repo_result.pull_requests.allow_merge_commit
+
+    - name: Delete repository
+      github_repo:
+        state: present
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: '{{ repo_name }}'
+        owner: '{{ organization_name }}'
+
+
+
+
+
+
+
+
+
+
+
+    - name: Delete repo
+      github_repo:
+        state: absent
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: test
+        owner: '{{ organization_name }}'
+
+
+    - name: Create repo with PR settings
+      github_repo:
+        state: present
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: repo_with_pr_settings
+        owner: '{{ organization_name }}'
+        pull_requests:
+          allow_merge_commit: no
+          allow_squash_merge: yes
+
+    - name: Repeat call to create/update an existing repo
+      github_repo:
+        state: present
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: repo_with_pr_settings
+        owner: '{{ organization_name }}'
+        pull_requests:
+          allow_merge_commit: no
+          allow_squash_merge: yes
+      register: previous_call
+
+    - assert:
+        that: not previous_call.changed
+
+    - name: Archive repo
+      github_repo:
+        state: archive
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: repo_with_pr_settings
+        owner: '{{ organization_name }}'
+
+    - name: Delete archived repo
+      github_repo:
+        state: absent
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: repo_with_pr_settings
+        owner: '{{ organization_name }}'

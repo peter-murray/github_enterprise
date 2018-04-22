@@ -1,0 +1,61 @@
+---
+
+- hosts: localhost
+  gather_facts: no
+  roles:
+    - role: github_enterprise
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+    - set_fact:
+        ghe_token: xxxx
+        ghe_base_url: https://172.20.10.5/api/v3
+        ghe_token_user: pmurray
+
+    # - github_organization:
+    #     state: present
+    #     base_url: '{{ ghe_base_url }}'
+    #     token: '{{ ghe_token }}'
+    #     token_user: '{{ ghe_token_user }}'
+    #     owner: pmurray
+    #     name: my-test-org-2
+    #     validate_certs: no
+    #
+    # - github_organization:
+    #     state: present
+    #     base_url: '{{ ghe_base_url }}'
+    #     token: '{{ ghe_token }}'
+    #     token_user: '{{ ghe_token_user }}'
+    #     owner: pmurray
+    #     name: ghe-test-org
+    #     validate_certs: no
+
+    - github_repo:
+        state: present
+        base_url: '{{ ghe_base_url }}'
+        token: '{{ ghe_token }}'
+        token_user: '{{ ghe_token_user }}'
+        validate_certs: no
+        name: test
+        owner: my-test-org-2
+        archived: no
+
+    # - github_organization:
+    #     state: present
+    #     base_url: '{{ ghe_base_url }}'
+    #     token: '{{ ghe_token }}'
+    #     token_user: '{{ ghe_token_user }}'
+    #     owner: pmurray
+    #     name: ghe-test-org
+    #     validate_certs: no
+    #
+    # - github_organization:
+    #     state: rename
+    #     base_url: '{{ ghe_base_url }}'
+    #     token: '{{ ghe_token }}'
+    #     token_user: '{{ ghe_token_user }}'
+    #     # owner: pmurray
+    #     name: ghe-test-org
+    #     rename_to: ghe-test-org-renamed
+    #     validate_certs: no
